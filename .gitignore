@@ -1,9 +1,31 @@
-_build/
-*.install
-.merlin
-*.cmi
+# OCaml build artifacts
+*.annot
 *.cmo
-*.cmx
+*.cma
+*.cmi
+*.a
 *.o
-writing-a-c-compiler-tests/
+*.cmx
+*.cmxs
+*.cmxa
+*.cmt
+*.cmti
+*.byte
+*.native
+
+# Build directories
+_build/
+_opam/
+
+# Merlin / editor config
+.merlin
+
+# Dune generated files
+*.install
+
+# oasis generated files
+setup.data
+setup.log
+
+# External test suite (not part of this project's source)
 writing-a-c-compiler-tests/
