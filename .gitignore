@@ -1,0 +1,9 @@
+_build/
+*.install
+.merlin
+*.cmi
+*.cmo
+*.cmx
+*.o
+writing-a-c-compiler-tests/
+writing-a-c-compiler-tests/
