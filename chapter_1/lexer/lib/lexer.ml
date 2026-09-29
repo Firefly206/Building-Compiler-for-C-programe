@@ -19,6 +19,7 @@ type token_type =
   | TokenMinus
   | TokenStar
   | TokenSlash
+  | TokenNot (* ! *)
   | TokenAssign (* = *)
   | TokenEq (* == *)
   | TokenNeq (* != *)
@@ -45,7 +46,7 @@ let advance (state : lexer_state) : unit = state.position <- state.position + 1
 
 (* This is a fun that takes state and fun condition and return string or rather the word to tokenize.
  First we create a buffer so we add char to that buffer build up the string, instead of copy the string and add char after that,
- increase the pointer using advance, and then loop back. Loop takes no arguements and return nothing, that's why we use unite type.*)
+ increase the pointer using advance, and then loop back. Loop takes no arguements and return nothing, that's why we use unit type.*)
 let read_while (state : lexer_state) (condition : char -> bool) : string =
   let buff = Buffer.create 16 in
   let rec loop () =
