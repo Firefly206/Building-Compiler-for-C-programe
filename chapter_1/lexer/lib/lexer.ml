@@ -200,13 +200,19 @@ let rec next_token (state : lexer_state) : token_type =
   | Some '&' -> begin
       advance state;
       match peek state with
-      | Some '&' -> TokenAnd
+      | Some '&' -> begin
+          advance state;
+          TokenAnd
+        end
       | _ -> failwith "unexpected character '&'"
     end
   | Some '|' -> begin
       advance state;
       match peek state with
-      | Some '|' -> TokenOr
+      | Some '|' -> begin
+          advance state;
+          TokenOr
+        end
       | _ -> failwith "unexpected character '|'"
     end
   | Some c -> failwith (Printf.sprintf "unexpected character '%c'" c)
