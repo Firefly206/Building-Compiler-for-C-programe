@@ -161,4 +161,52 @@ let rec next_token (state : lexer_state) : token_type =
         end
       | _ -> TokenSlash
     end
+  | Some '=' -> begin
+      advance state;
+      match peek state with
+      | Some '=' -> begin
+          advance state;
+          TokenEq
+        end
+      | _ -> TokenAssign
+    end
+  | Some '!' -> begin
+      advance state;
+      match peek state with
+      | Some '=' -> begin
+          advance state;
+          TokenNeq
+        end
+      | _ -> TokenNot
+    end
+  | Some '<' -> begin
+      advance state;
+      match peek state with
+      | Some '=' -> begin
+          advance state;
+          TokenLeq
+        end
+      | _ -> TokenLt
+    end
+  | Some '>' -> begin
+      advance state;
+      match peek state with
+      | Some '=' -> begin
+          advance state;
+          TokenGeq
+        end
+      | _ -> TokenGt
+    end
+  | Some '&' -> begin
+      advance state;
+      match peek state with
+      | Some '&' -> TokenAnd
+      | _ -> failwith "unexpected character '&'"
+    end
+  | Some '|' -> begin
+      advance state;
+      match peek state with
+      | Some '|' -> TokenOr
+      | _ -> failwith "unexpected character '|'"
+    end
   | Some c -> failwith (Printf.sprintf "unexpected character '%c'" c)
