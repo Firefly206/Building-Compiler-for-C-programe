@@ -43,11 +43,19 @@ let peek (state : lexer_state) : char option =
 (* This is to increase the position/pointer at the string *)
 let advance (state : lexer_state) : unit = state.position <- state.position + 1
 
-let read_while (state : lexer_state) (condition : bool ) : string =
-    let buff = Buffer.create 16 in
-    let rec loop () = 
-        match peek state with
-        | 
-
-
-
+(* This is a fun that takes state and fun condition and return string or rather the word to tokenize.
+ First we create a buffer so we add char to that buffer build up the string, instead of copy the string and add char after that,
+ increase the pointer using advance, and then loop back. Loop takes no arguements and return nothing, that's why we use unite type.*)
+let read_while (state : lexer_state) (condition : char -> bool) : string =
+  let buff = Buffer.create 16 in
+  let rec loop () =
+    match peek state with
+    | Some c when condition c -> begin
+        Buffer.add_char buff c;
+        advance state;
+        loop ()
+      end
+    | _ -> ()
+  in
+  loop ();
+  Buffer.contents buff
