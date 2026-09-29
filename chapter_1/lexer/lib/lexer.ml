@@ -216,3 +216,15 @@ let rec next_token (state : lexer_state) : token_type =
       | _ -> failwith "unexpected character '|'"
     end
   | Some c -> failwith (Printf.sprintf "unexpected character '%c'" c)
+
+let tokenize (state : lexer_state) : token_type list =
+  begin
+    let rec acc_tokenize (state : lexer_state) (acc : token_type list) :
+        token_type list =
+      match next_token state with
+      | TokenEOF -> acc
+      | tken -> acc_tokenize state (tken :: acc)
+    in
+    (* acc_tokenize state [] *)
+    List.rev (acc_tokenize state [])
+  end
