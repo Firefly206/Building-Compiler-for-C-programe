@@ -69,6 +69,12 @@ let read_while (state : lexer_state) (condition : char -> bool) : string =
   Buffer.contents buff
 
 (* This function takes and process a string and return the token type. *)
+(* Produces exactly one token starting at the current position in [state].
+   Handles: skipping whitespace and both comment styles (//, /* */),
+   integer constants, identifiers/keywords, single-char punctuation,
+   and operators that may be one or two characters (=, ==, <, <=, etc).
+   Raises an error on any unrecognized character. Recurses on itself
+   for whitespace/comments, since those don't produce a token directly. *)
 let rec next_token (state : lexer_state) : token_type =
   let is_digit (c : char) : bool = c >= '0' && c <= '9' in
   let is_letter (c : char) : bool =
@@ -77,6 +83,12 @@ let rec next_token (state : lexer_state) : token_type =
   let is_identifier_char (c : char) : bool =
     c = '_' || is_letter c || is_digit c
   in
+  (* Consumes a block comment's body and its closing */.
+   Assumes the caller has already consumed the opening /* — this function
+   only looks for the close. Three cases: hitting end of file before
+   finding */ is an error (unterminated comment); finding * immediately
+   followed by / consumes both and stops; anything else just advances
+   past one character and keeps looking. *)
   let rec skip_block_comment (state : lexer_state) : unit =
     match (peek state, peek_next state) with
     | None, _ -> failwith "unterminated comment"
@@ -217,6 +229,11 @@ let rec next_token (state : lexer_state) : token_type =
     end
   | Some c -> failwith (Printf.sprintf "unexpected character '%c'" c)
 
+(* Repeatedly calls next_token to collect every token in [state] into a
+   list. Uses an accumulator (acc) so the recursion is tail-recursive —
+   each token gets prepended (::) rather than appended, which is why the
+   final accumulated list is in reverse order and needs List.rev at the
+   end. TokenEOF itself is not included in the returned list. *)
 let tokenize (state : lexer_state) : token_type list =
   begin
     let rec acc_tokenize (state : lexer_state) (acc : token_type list) :
