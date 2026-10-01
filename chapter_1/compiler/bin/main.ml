@@ -1,3 +1,5 @@
+open Compiler
+
 let read_file (filename : string) : string =
   try
     (* Read file and display the first line *)
