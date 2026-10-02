@@ -31,6 +31,39 @@ type token_type =
   | TokenOr (* || *)
   | TokenEOF
 
+let token_to_str (token : token_type) : string =
+  match token with
+  | TokenInt -> "TokenInt(int)"
+  | TokenVoid -> "TokenVoid(void)"
+  | TokenReturn -> "TokenReturn(return)"
+  | TokenIf -> "TokenIf(if)"
+  | TokenElse -> "TokenElse(else)"
+  | TokenWhile -> "TokenWhile(while)"
+  | TokenFor -> "TokenFor(for)"
+  | TokenIdentifier_str s -> "TokenIdentifier(" ^ s ^ ")"
+  | TokenConstant_int n -> "TokenConstant(" ^ string_of_int n ^ ")"
+  | TokenLeftParenthesis -> "TokenLeftParenthesis[ ( ]"
+  | TokenRightParenthesis -> "TokenRightParenthesis[ ) ]"
+  | TokenLeftBrace -> "TokenLeftBrace({)"
+  | TokenRightBrace -> "TokenRightBrace(})"
+  | TokenSemiColon -> "TokenSemiColon(;)"
+  | TokenComa -> "TokenComa(,)"
+  | TokenPlus -> "TokenPlus(+)"
+  | TokenMinus -> "TokenMinus(-)"
+  | TokenStar -> "TokenStar(*)"
+  | TokenSlash -> "TokenSlash(/)"
+  | TokenNot -> "TokenNot(!)"
+  | TokenAssign -> "TokenAssign(=)"
+  | TokenEq -> "TokenEq(==)"
+  | TokenNeq -> "TokenNeq(!=)"
+  | TokenLt -> "TokenLt(<)"
+  | TokenLeq -> "TokenLeq(<=)"
+  | TokenGt -> "TokenGt(>)"
+  | TokenGeq -> "TokenGeq(>=)"
+  | TokenAnd -> "TokenAnd(&&)"
+  | TokenOr -> "TokenOr(||)"
+  | TokenEOF -> "TokenEOF"
+
 (* This is a record that holds the file(a big string) and a index(location) *)
 type lexer_state = { source : string; mutable position : int }
 

@@ -21,7 +21,7 @@ type exp =
   | Binary of binary_operator * exp * exp
   | Assignment of exp * exp
 
-type var_type = IntType
+type var_type = IntType | VoidType
 
 type declaration = {
   decl_type : var_type;
@@ -41,3 +41,14 @@ type statement =
   | Block of statement list
   | For of for_loop * statement
   | Null
+
+type parameter = { parameter_type : var_type; parameter_name : string }
+
+type fun_def = {
+  fun_type : var_type;
+  fun_name : string;
+  fun_parameter : parameter list;
+  fun_body : statement list;
+}
+
+type program_def = { fun_defs : fun_def list }
