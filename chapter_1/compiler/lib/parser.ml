@@ -58,8 +58,9 @@ let rec parse_exp (token_list : Lexer.token_type list) (min_priority : int) :
           end
         | Lexer.TokenIdentifier_str variable -> (Ast.Variable variable, rest)
         | Lexer.TokenLeftParenthesis -> begin
-            let inner, rest' = parse_factor rest in
-            (inner, rest')
+            let inner, rest' = parse_exp rest 0 in
+            let rest'' = expect Lexer.TokenRightParenthesis rest' in
+            (inner, rest'')
           end
         | _ -> failwith "Not in the list of known expression"
         end
@@ -70,14 +71,26 @@ let rec parse_exp (token_list : Lexer.token_type list) (min_priority : int) :
     match tokens with
     | [] -> (left, tokens)
     | h :: rest ->
-        (* a weak operator makes the inner call stop and return what it has *)
-        begin match binop_of_token h with
-        | None -> (left, tokens)
-        | Some (_, priority) when priority < min_priority -> (left, tokens)
-        | Some (op, priority) -> begin
-            let right, rest' = parse_exp rest (priority + 1) in
-            absorb_operators (Ast.Binary (op, left, right)) rest'
-          end
+        (* Assignment case *)
+        begin match h with
+        | Lexer.TokenAssign ->
+            begin match left with
+            | Ast.Variable _ -> begin
+                let right, rest' = parse_exp rest 1 in
+                absorb_operators (Ast.Assignment (left, right)) rest'
+              end
+            | _ -> failwith "Left side for Assignment must be Variable"
+            end
+        | _ ->
+            (* a weak operator makes the inner call stop and return what it has *)
+            begin match binop_of_token h with
+            | None -> (left, tokens)
+            | Some (_, priority) when priority < min_priority -> (left, tokens)
+            | Some (op, priority) -> begin
+                let right, rest' = parse_exp rest (priority + 1) in
+                absorb_operators (Ast.Binary (op, left, right)) rest'
+              end
+            end
         end
   in
 
