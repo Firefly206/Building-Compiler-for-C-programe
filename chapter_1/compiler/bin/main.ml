@@ -23,6 +23,13 @@ let lexer_state : Lexer.lexer_state =
 
 let () =
   begin
-    lexer_state |> Lexer.tokenize
-    |> List.iter (fun t -> print_endline (Lexer.token_to_str t))
+    let tokens : Lexer.token_type list = Lexer.tokenize lexer_state in
+    print_endline "====Lexer state=====";
+    tokens |> List.iter (fun t -> print_endline (Lexer.token_to_str t));
+    print_endline "====Parser state====";
+    let (tree, rest) = Parser.parse_exp tokens 0 in
+    (* print_endline (Ast.printer tree 0) *)
+    tree |> (fun t -> Ast.printer t 0) |> print_endline; 
+    (* Debbug *)
+    rest |> List.length |> string_of_int |> (fun str -> (print_endline ("Tokens left: " ^ str)))
   end
