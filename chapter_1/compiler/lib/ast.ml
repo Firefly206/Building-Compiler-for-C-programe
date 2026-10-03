@@ -60,7 +60,7 @@ let label (expression : exp) : string =
   | Binary (op, _, _) -> "Binary(" ^ (bin_op_to_str op) ^ ")"
   | Assignment (_, _) -> "Assignment"
 
-let children_fun (expression : exp) : exp list =
+let inner_exp_fun (expression : exp) : exp list =
   match expression with
   | Constant _ -> []
   | Variable _ -> []
@@ -69,8 +69,9 @@ let children_fun (expression : exp) : exp list =
   | Assignment (left, right) -> [left; right]
 
 let rec printer (expression : exp) (num_spaces : int) : string =
-  (String.make num_spaces ' ') ^ label expression ^ 
-  (String.concat "\n" (List.map (fun child -> printer child (num_spaces + 2)) (children_fun expression)))  
+  let current_line = (String.make num_spaces ' ') ^ label expression in
+  let inner_exps_str = List.map (fun (inner : exp) -> printer inner (num_spaces + 2)) (inner_exp_fun expression) in
+  String.concat "\n" (current_line :: inner_exps_str)
 
 type var_type = IntType | VoidType
 
