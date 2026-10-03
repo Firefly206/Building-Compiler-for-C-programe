@@ -75,6 +75,7 @@ let rec parse_exp (token_list : Lexer.token_type list) (min_priority : int) :
         begin match h with
         | Lexer.TokenAssign ->
             begin match left with
+            | _ when 1 < min_priority -> (left, tokens)
             | Ast.Variable _ -> begin
                 let right, rest' = parse_exp rest 1 in
                 absorb_operators (Ast.Assignment (left, right)) rest'
