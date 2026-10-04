@@ -107,15 +107,16 @@ let parse_statement (token_list : Lexer.token_type list) :
       | Lexer.TokenReturn ->
           begin match rest with
           | [] -> failwith "Empty return body"
-          | first_token :: _ ->
-              begin match first_token with
-              | Lexer.TokenSemiColon ->
-                  failwith "No expression nor void. Example: <return ;>"
-              | _ -> 
-                  begin let (inner, rest') = (parse_exp rest 0) in
-                  (Ast.Return inner, (expect Lexer.TokenSemiColon rest'))
-                  end
-              end
+          | Lexer.TokenSemiColon :: _ ->
+              failwith "No expression nor void. Example: <return ;>"
+          | _ -> begin
+              let inner, rest' = parse_exp rest 0 in
+              (Ast.Return inner, expect Lexer.TokenSemiColon rest')
+            end
           end
-      | _ -> failwith "Not yet in the statement"
+      | Lexer.TokenSemiColon -> (Ast.Null, rest)
+      | _ -> begin
+          let expression, rest' = parse_exp token_list 0 in
+          (Ast.Expression expression, expect Lexer.TokenSemiColon rest')
+        end
       end
