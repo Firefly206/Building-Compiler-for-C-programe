@@ -97,3 +97,20 @@ let rec parse_exp (token_list : Lexer.token_type list) (min_priority : int) :
 
   let left, rest = parse_factor token_list in
   absorb_operators left rest
+
+let parse_statement (token_list : Lexer.token_type list) :
+    Ast.statement * Lexer.token_type list =
+  match token_list with
+  | [] -> failwith "Empty token for statement"
+  | h :: rest ->
+      begin match h with
+      | Lexer.TokenReturn ->
+          begin match rest with
+          | inner :: rest' ->
+              begin match inner with
+              | Lexer.TokenSemiColon ->
+                  failwith "Empty body, no expression nor void"
+              | _ -> parse_exp rest' 0
+              end
+          end
+      end
