@@ -124,16 +124,17 @@ let parse_declaration (token_list : Lexer.token_type list) :
                      ended"
               | Lexer.TokenAssign :: after -> begin
                   let inner, after' = parse_exp after 0 in
-                  ( Ast.declaration
-                      { decl_type = Ast.IntType; name; init_val = Some inner },
-                    after' )
+                  ( { decl_type = Ast.IntType; name; init_val = Some inner },
+                    expect Lexer.TokenSemiColon after' )
                 end
+              | Lexer.TokenSemiColon :: after ->
+                  ({ decl_type = Ast.IntType; name; init_val = None }, after)
               | h :: _ ->
                   failwith
                     ("Expected = or ; after the variable name, but got "
                    ^ Lexer.token_to_str h ^ " instead")
-              | _ -> failwith "Expect a name for variable"
               end
+          | _ -> failwith "Expect a name for variable"
           end
       end
 
