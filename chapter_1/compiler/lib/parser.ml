@@ -98,7 +98,7 @@ let rec parse_exp (token_list : Lexer.token_type list) (min_priority : int) :
   let left, rest = parse_factor token_list in
   absorb_operators left rest
 
-let parse_statement (token_list : Lexer.token_type list) :
+let rec parse_statement (token_list : Lexer.token_type list) :
     Ast.statement * Lexer.token_type list =
   match token_list with
   | [] -> failwith "Empty token for statement"
@@ -114,6 +114,17 @@ let parse_statement (token_list : Lexer.token_type list) :
               (Ast.Return inner, expect Lexer.TokenSemiColon rest')
             end
           end
+      | Lexer.TokenWhile -> begin
+          let inner, rest' =
+            parse_exp (expect Lexer.TokenLeftParenthesis rest) 0
+          in
+          let inner', rest'' =
+            parse_statement (expect Lexer.TokenRightParenthesis rest')
+          in
+          (Ast.While (inner, inner'), rest'')
+        end
+      | Lexer.TokenLeftBrace -> begin
+          let rec read_block_item (tokens : Lexer.token_type list) (collected : Ast.statement list) : Ast.statement * Lexer.token_type list =  
       | Lexer.TokenSemiColon -> (Ast.Null, rest)
       | _ -> begin
           let expression, rest' = parse_exp token_list 0 in
