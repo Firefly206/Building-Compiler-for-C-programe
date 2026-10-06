@@ -98,6 +98,15 @@ let rec parse_exp (token_list : Lexer.token_type list) (min_priority : int) :
   let left, rest = parse_factor token_list in
   absorb_operators left rest
 
+(* declaration helper *)
+let token_to_tree_type (token : Lexer.token_type) : Ast.var_type =
+  match token with
+  | Lexer.TokenInt -> Ast.IntType
+  | Lexer.TokenVoid -> Ast.VoidType
+  | _ -> failwith "Does not include that type yet."
+
+(* declaration *)
+
 let rec parse_statement (token_list : Lexer.token_type list) :
     Ast.statement * Lexer.token_type list =
   match token_list with
