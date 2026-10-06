@@ -106,9 +106,36 @@ let token_to_tree_type (token : Lexer.token_type) : Ast.var_type option =
   | _ -> None
 
 (* declaration *)
-let parse_declaration (token_list : Lexer.token_type list) : 
+let parse_declaration (token_list : Lexer.token_type list) :
     Ast.declaration * Lexer.token_type list =
-
+  match token_list with
+  | [] -> failwith "Expect a type (int) here but the input ends abruptly"
+  | h :: rest ->
+      begin match token_to_tree_type h with
+      | Some Ast.VoidType -> failwith "A variable can not be a void type"
+      | None -> failwith "Fails because a type was expected"
+      | Some Ast.IntType ->
+          begin match rest with
+          | Lexer.TokenIdentifier_str name :: rest'' ->
+              begin match rest'' with
+              | [] ->
+                  failwith
+                    "Expected = or ; after the variable name, but the input \
+                     ended"
+              | Lexer.TokenAssign :: after -> begin
+                  let inner, after' = parse_exp after 0 in
+                  ( Ast.declaration
+                      { decl_type = Ast.IntType; name; init_val = Some inner },
+                    after' )
+                end
+              | h :: _ ->
+                  failwith
+                    ("Expected = or ; after the variable name, but got "
+                   ^ Lexer.token_to_str h ^ " instead")
+              | _ -> failwith "Expect a name for variable"
+              end
+          end
+      end
 
 let rec parse_statement (token_list : Lexer.token_type list) :
     Ast.statement * Lexer.token_type list =
