@@ -124,7 +124,21 @@ let rec parse_statement (token_list : Lexer.token_type list) :
           (Ast.While (inner, inner'), rest'')
         end
       | Lexer.TokenLeftBrace -> begin
-          let rec read_block_item (tokens : Lexer.token_type list) (collected : Ast.statement list) : Ast.statement * Lexer.token_type list =  
+          let rec read_block_item (tokens : Lexer.token_type list)
+              (collected_acc : Ast.statement list) :
+              Ast.statement * Lexer.token_type list =
+            match tokens with
+            | [] -> failwith "Unclosed block, missing right braces"
+            | Lexer.TokenRightBrace :: rest ->
+                (Ast.Block (List.rev collected_acc), rest)
+            | _ -> begin
+                let statement, rest = parse_statement tokens in
+                read_block_item rest (statement :: collected_acc)
+              end
+          in
+
+          read_block_item rest []
+        end
       | Lexer.TokenSemiColon -> (Ast.Null, rest)
       | _ -> begin
           let expression, rest' = parse_exp token_list 0 in
