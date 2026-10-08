@@ -138,6 +138,33 @@ let parse_declaration (token_list : Lexer.token_type list) :
           end
       end
 
+(* For helper *)
+let parse_optional_exp (terminator : Lexer.token_type)
+    (token_list : Lexer.token_type list) :
+    Ast.exp option * Lexer.token_type list =
+  begin match token_list with
+  | h :: rest when h = terminator -> (None, rest)
+  | _ -> begin
+      let expression, rest' = parse_exp token_list 0 in
+      (Some expression, expect terminator rest')
+    end
+  end
+
+let parse_init_forloop (token_list : Lexer.token_type list) :
+    Ast.for_init * Lexer.token_type list =
+  begin match token_list with
+  | Lexer.TokenInt :: _ -> begin
+      let declare, after = parse_declaration token_list in
+      (Ast.InitDeclare declare, after)
+    end
+  | _ -> begin
+      let expression, after =
+        parse_optional_exp Lexer.TokenSemiColon token_list
+      in
+      (Ast.InitExp expression, after)
+    end
+  end
+
 let rec parse_statement (token_list : Lexer.token_type list) :
     Ast.statement * Lexer.token_type list =
   match token_list with
@@ -197,6 +224,22 @@ let rec parse_statement (token_list : Lexer.token_type list) :
               (Ast.If (exp_inner, statement_inner, Some else_inner), after)
             end
           | _ -> (Ast.If (exp_inner, statement_inner, None), rest'')
+        end
+      | Lexer.TokenFor -> begin
+          let init_for, after =
+            parse_init_forloop (expect Lexer.TokenLeftParenthesis rest)
+          in
+          let cond_for, after' =
+            parse_optional_exp Lexer.TokenSemiColon after
+          in
+          let post_for, after'' =
+            parse_optional_exp Lexer.TokenRightParenthesis after'
+          in
+          let for_statement, after_for = parse_statement after'' in
+          ( Ast.For
+              ( { init = init_for; condition = cond_for; post = post_for },
+                for_statement ),
+            after_for )
         end
       | Lexer.TokenSemiColon -> (Ast.Null, rest)
       | _ -> begin
