@@ -247,3 +247,27 @@ let rec parse_statement (token_list : Lexer.token_type list) :
           (Ast.Expression expression, expect Lexer.TokenSemiColon rest')
         end
       end
+
+let parse_parameter (token_list : Lexer.token_type list) : 
+    Ast.parameter * Lexer.token_type list = begin
+        match token_list with
+        | [] -> failwith "Expect a type (int) but input ends"
+        | h :: rest -> begin
+            match token_to_tree_type h with
+            | Some Ast.VoidType -> failwith "A variable can not be a void type"
+            | None -> failwith "A type was expected"
+            | Some Ast.IntType -> begin
+                match rest with
+                | Lexer.TokenIdentifier_str name :: rest'' -> begin
+                    ({parameter_type = IntType; parameter_name = name}, rest'')
+                end
+                | _ -> failwith "Expect a name for variable"
+            end
+        end
+    end
+
+let parse_param_list (token_list : Lexer.token_type list) : 
+    Ast.parameter list * Lexer.token_type list = begin
+
+
+let parse_function (token_list : Lexer.token_type list) ()
