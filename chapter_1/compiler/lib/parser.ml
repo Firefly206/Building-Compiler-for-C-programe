@@ -248,26 +248,92 @@ let rec parse_statement (token_list : Lexer.token_type list) :
         end
       end
 
-let parse_parameter (token_list : Lexer.token_type list) : 
-    Ast.parameter * Lexer.token_type list = begin
-        match token_list with
-        | [] -> failwith "Expect a type (int) but input ends"
-        | h :: rest -> begin
-            match token_to_tree_type h with
-            | Some Ast.VoidType -> failwith "A variable can not be a void type"
-            | None -> failwith "A type was expected"
-            | Some Ast.IntType -> begin
-                match rest with
-                | Lexer.TokenIdentifier_str name :: rest'' -> begin
-                    ({parameter_type = IntType; parameter_name = name}, rest'')
-                end
-                | _ -> failwith "Expect a name for variable"
+let parse_parameter (token_list : Lexer.token_type list) :
+    Ast.parameter * Lexer.token_type list =
+  begin match token_list with
+  | [] -> failwith "Expect a type (int) but input ends"
+  | h :: rest ->
+      begin match token_to_tree_type h with
+      | Some Ast.VoidType -> failwith "A variable can not be a void type"
+      | None -> failwith "A type was expected"
+      | Some Ast.IntType ->
+          begin match rest with
+          | Lexer.TokenIdentifier_str name :: rest'' -> begin
+              ({ parameter_type = IntType; parameter_name = name }, rest'')
             end
+          | _ -> failwith "Expect a name for variable"
+          end
+      end
+  end
+
+let parse_param_list (token_list : Lexer.token_type list) :
+    Ast.parameter list * Lexer.token_type list =
+  begin
+    let rec read_comma_params (tokens : Lexer.token_type list)
+        (acc : Ast.parameter list) : Ast.parameter list * Lexer.token_type list
+        =
+      begin match tokens with
+      | Lexer.TokenComa :: after -> begin
+          let param, after' = parse_parameter after in
+          read_comma_params after' (param :: acc)
         end
+      | _ -> (List.rev acc, tokens)
+      end
+    in
+
+    match token_list with
+    | Lexer.TokenVoid :: after -> ([], after)
+    | Lexer.TokenInt :: _ -> begin
+        let param, after = parse_parameter token_list in
+        read_comma_params after [ param ]
+      end
+    | _ -> failwith "Expect type VOID or type INT"
+  end
+
+let parse_function (token_list : Lexer.token_type list) :
+    Ast.fun_def * Lexer.token_type list =
+  begin match token_list with
+  | [] -> failwith "Expect a type (Int) or (Void) but input ends"
+  | h :: rest -> begin
+      let function_type = token_to_tree_type h in
+      match function_type with
+      | None -> failwith "Fails because a type was expected"
+      | Some vt ->
+          begin match rest with
+          | Lexer.TokenIdentifier_str name :: after -> begin
+              let param_list, after' =
+                parse_param_list (expect Lexer.TokenLeftParenthesis after)
+              in
+              let fun_statement, after'' =
+                parse_statement (expect Lexer.TokenRightParenthesis after')
+              in
+              match fun_statement with
+              | Ast.Block items ->
+                  ( {
+                      fun_type = vt;
+                      fun_name = name;
+                      fun_parameter = param_list;
+                      fun_body = items;
+                    },
+                    after'' )
+              | _ -> failwith "Function body must be a block"
+            end
+          | _ -> failwith "Expect a name for function"
+          end
     end
+  end
 
-let parse_param_list (token_list : Lexer.token_type list) : 
-    Ast.parameter list * Lexer.token_type list = begin
-
-
-let parse_function (token_list : Lexer.token_type list) ()
+let parse_program (token_list : Lexer.token_type list) : Ast.program_def =
+  begin
+    let rec parse_program_rec (token_list : Lexer.token_type list)
+        (acc : Ast.fun_def list) : Ast.program_def =
+      begin match token_list with
+      | [] -> { fun_defs = List.rev acc }
+      | _ -> begin
+          let func, after = parse_function token_list in
+          parse_program_rec after (func :: acc)
+        end
+      end
+    in
+    parse_program_rec token_list []
+  end
