@@ -14,9 +14,15 @@ let read_file (filename : string) : string =
     (* emergency closing *)
     raise e
 
+let flag : string =
+  begin if Array.length Sys.argv >= 2 then Sys.argv.(1)
+  else failwith "usage: ./main --stage-name"
+  end
+
 let file_path : string =
-  if Array.length Sys.argv >= 2 then Sys.argv.(1)
-  else failwith "usage: ./main <file.c>"
+  begin if Array.length Sys.argv >= 3 then Sys.argv.(2)
+  else failwith "usage: ./main --lex|--parse <file.c>"
+  end
 
 let lexer_state : Lexer.lexer_state =
   { source = read_file file_path; position = 0 }
@@ -24,12 +30,14 @@ let lexer_state : Lexer.lexer_state =
 let () =
   begin
     let tokens : Lexer.token_type list = Lexer.tokenize lexer_state in
-    print_endline "====Lexer state=====";
-    tokens |> List.iter (fun t -> print_endline (Lexer.token_to_str t));
-    print_endline "====Parser state====";
-    let (tree, rest) = Parser.parse_exp tokens 0 in
-    (* print_endline (Ast.printer tree 0) *)
-    tree |> (fun t -> Ast.printer t 0) |> print_endline; 
-    (* Debbug *)
-    rest |> List.length |> string_of_int |> (fun str -> (print_endline ("Tokens left: " ^ str)))
+    match flag with
+    | "--lex" -> begin
+        print_endline "====Lexer state=====";
+        tokens |> List.iter (fun t -> print_endline (Lexer.token_to_str t))
+      end
+    | "--parse" -> begin
+        print_endline "====Parser state====";
+        print_endline "Parse OK"
+      end
+    | _ -> failwith "fails with the usage message"
   end

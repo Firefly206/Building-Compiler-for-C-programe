@@ -1,6 +1,3 @@
-open Lexer
-open Ast
-
 let expect (token_expect : Lexer.token_type)
     (token_list : Lexer.token_type list) : Lexer.token_type list =
   match token_list with
