@@ -36,4 +36,34 @@ let node_of_declaration (declaration : Ast.declaration) : node =
     }
   end
 
-let node_of_statement
+let labeled (label_node : string) (lst_node : node list) : node =
+  begin
+    { label = label_node; children = lst_node }
+  end
+
+(* Helper for "for loop" statement *)
+
+let rec node_of_statement (statement : Ast.statement) : node =
+  begin match statement with
+  | Ast.Return expression -> labeled "Return" [ node_of_exp expression ]
+  | Ast.Expression expression -> labeled "Expression" [ node_of_exp expression ]
+  | Ast.Declaration declare -> node_of_declaration declare
+  | Ast.While (condition, body) ->
+      labeled "While" [ node_of_exp condition; node_of_statement body ]
+  | Ast.Block items -> labeled "Block" (List.map node_of_statement items)
+  | Ast.If (condition, then_branch, else_branch) ->
+      begin match else_branch with
+      | None ->
+          labeled "If" [ node_of_exp condition; node_of_statement then_branch ]
+      | Some s ->
+          labeled "If"
+            [
+              node_of_exp condition;
+              node_of_statement then_branch;
+              node_of_statement s;
+            ]
+      end
+  | Ast.Null -> labeled "Null" []
+  | Ast.For -> 
+  | _ -> failwith "TODO"
+  end
