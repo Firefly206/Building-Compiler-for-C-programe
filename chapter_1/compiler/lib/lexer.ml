@@ -142,7 +142,13 @@ let rec next_token (state : lexer_state) : token_type =
     end
   | Some c when is_digit c -> begin
       let str = read_while state (fun c -> is_digit c) in
-      TokenConstant_int (int_of_string str)
+      match peek state with
+      | Some c when is_identifier_char c ->
+          failwith
+            "Invalid_identifier: Names must begin with a letter or an \
+             underscore (_). Found likely: a number directly followed by a \
+             letter or underscore"
+      | _ -> TokenConstant_int (int_of_string str)
     end
   | Some c when is_letter c || c = '_' -> begin
       let str = read_while state (fun c -> is_identifier_char c) in

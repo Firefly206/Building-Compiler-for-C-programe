@@ -42,6 +42,18 @@ let labeled (label_node : string) (lst_node : node list) : node =
   end
 
 (* Helper for "for loop" statement *)
+let node_of_optional_exp (option_exp : Ast.exp option) : node =
+  (* Node for condition and post *)
+  begin match option_exp with
+  | None -> labeled "(None)" []
+  | Some e -> node_of_exp e
+  end
+
+let node_of_for_init (for_init : Ast.for_init) : node =
+  begin match for_init with
+  | Ast.InitDeclare declare -> node_of_declaration declare
+  | Ast.InitExp option_exp -> node_of_optional_exp option_exp
+  end
 
 let rec node_of_statement (statement : Ast.statement) : node =
   begin match statement with
@@ -64,6 +76,36 @@ let rec node_of_statement (statement : Ast.statement) : node =
             ]
       end
   | Ast.Null -> labeled "Null" []
-  | Ast.For -> 
-  | _ -> failwith "TODO"
+  | Ast.For (for_loop, s) -> begin
+      labeled "For"
+        [
+          node_of_for_init for_loop.init;
+          node_of_optional_exp for_loop.condition;
+          node_of_optional_exp for_loop.post;
+          node_of_statement s;
+        ]
+    end
+  end
+
+let node_of_parameter (param : Ast.parameter) : node =
+  begin
+    labeled
+      ("Parameter " ^ param.parameter_name ^ ": "
+      ^ Ast.var_type_to_str param.parameter_type)
+      []
+  end
+
+let node_of_function (func : Ast.fun_def) : node =
+  begin
+    labeled
+      ("Function " ^ func.fun_name ^ " : " ^ Ast.var_type_to_str func.fun_type)
+      [
+        labeled "Parameter" (List.map node_of_parameter func.fun_parameter);
+        labeled "Body" (List.map node_of_statement func.fun_body);
+      ]
+  end
+
+let node_of_program (program : Ast.program_def) : node =
+  begin
+    labeled "Program" (List.map node_of_function program.fun_defs)
   end

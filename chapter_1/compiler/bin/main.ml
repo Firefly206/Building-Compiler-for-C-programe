@@ -37,6 +37,10 @@ let () =
       end
     | "--parse" -> begin
         print_endline "====Parser state====";
+        Parser.parse_program tokens
+        |> Pretty.node_of_program
+        |> (fun (n : Pretty.node) : string -> Pretty.renderer n 0)
+        |> print_endline;
         print_endline "Parse OK"
       end
     | _ -> failwith "fails with the usage message"
