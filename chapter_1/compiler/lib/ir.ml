@@ -1,8 +1,12 @@
 type value = Num of int | Name of string
 
 (* step does one thing: compute a value and store it in a name, or return a value *)
-type step = Returni of value | Unaryi of Ast.unary_operator * value * value
-(* apply op to the value first value, and store the result in the second value *)
+type step =
+  | Returni of value
+  (* apply op to the value first value, and store the result in the second value *)
+  | Unaryi of Ast.unary_operator * value * value
+  (* Binary (operator, left_value, right_value, store/destination)*)
+  | Binaryi of Ast.binary_operator * value * value * value
 
 let create_tmp_name (n : int) : value * int =
   begin
@@ -17,7 +21,29 @@ let rec flattening_exp (expression : Ast.exp) (counter : int) :
   | Ast.Unary (op, inner) -> begin
       let lst, v, counter' = flattening_exp inner counter in
       let tmp_name_val, counter'' = create_tmp_name counter' in
+      (* [ Unaryi (op, value, value) ] is the outer shell, 
+         and we want to proccess inner -> outer shell, that's why
+         lst @ [ Unaryi () ] *)
       (lst @ [ Unaryi (op, v, tmp_name_val) ], tmp_name_val, counter'')
     end
+  | Ast.Binary (Ast.And, _, _) -> failwith "TODO"
+  | Ast.Binary (Ast.Or, _, _) -> failwith "TODO"
+  | Ast.Binary (op, left, right) -> begin
+      let left_lst, left_v, leftc' = flattening_exp left counter in
+      let right_lst, right_v, rightc' = flattening_exp right leftc' in
+      let destination_val, counter'' = create_tmp_name rightc' in
+      ( left_lst @ right_lst @ [ Binaryi (op, left_v, right_v, destination_val) ],
+        destination_val,
+        counter'' )
+    end
   | _ -> failwith "not yet"
+  end
+
+let flattening_statement (s : Ast.statement) (c : int) : step list * int =
+  begin match s with
+  | Ast.Return e -> begin
+      let lst, v, c' = flattening_exp e c in
+      (lst @ [ Returni v ], c')
+    end
+  | _ -> failwith "TODO"
   end
