@@ -67,3 +67,14 @@ let flattening_statement (s : Ast.statement) (c : int) : step list * int =
     end
   | _ -> failwith "TODO"
   end
+
+let rec flattening_list_statement (lst_s : Ast.statement list) (c : int) :
+    step list * int =
+  begin match lst_s with
+  | [] -> ([], c)
+  | h :: rest -> begin
+      let first_lst_step, c' = flattening_statement h c in
+      let second_lst_step, c'' = flattening_list_statement rest c' in
+      (first_lst_step @ second_lst_step, c'')
+    end
+  end
