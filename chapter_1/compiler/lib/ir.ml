@@ -8,6 +8,14 @@ type step =
   (* Binary (operator, left_value, right_value, store/destination)*)
   | Binaryi of Ast.binary_operator * value * value * value
 
+(* record type for one IR function with four fields: name, return type, parameters (a string list), and body (a step list) *)
+type fun_def_in_IR = {
+  fun_type_ir : Ast.var_type;
+  fun_name_ir : string;
+  fun_parameter_ir : string list;
+  fun_body_ir : step list;
+}
+
 let create_tmp_name (n : int) : value * int =
   begin
     (Name ("tmp." ^ string_of_int n), n + 1)
@@ -74,7 +82,29 @@ let rec flattening_list_statement (lst_s : Ast.statement list) (c : int) :
   | [] -> ([], c)
   | h :: rest -> begin
       let first_lst_step, c' = flattening_statement h c in
-      let second_lst_step, c'' = flattening_list_statement rest c' in
-      (first_lst_step @ second_lst_step, c'')
+      let rest_of_lst, c'' = flattening_list_statement rest c' in
+      (first_lst_step @ rest_of_lst, c'')
     end
+  end
+
+let flattening_function (f : Ast.fun_def) : fun_def_in_IR =
+  begin
+    {
+      fun_type_ir = f.fun_type;
+      fun_name_ir = f.fun_name;
+      fun_parameter_ir =
+        List.map
+          (fun (t : Ast.parameter) : string -> t.parameter_name)
+          f.fun_parameter;
+      fun_body_ir =
+        begin
+          let steps, _ = flattening_list_statement f.fun_body 0 in
+          steps
+        end;
+    }
+  end
+
+let flattening_program (p : Ast.program_def) : fun_def_in_IR list =
+  begin
+    List.map flattening_function p.fun_defs
   end
