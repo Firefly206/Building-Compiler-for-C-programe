@@ -13,6 +13,26 @@ let create_tmp_name (n : int) : value * int =
     (Name ("tmp." ^ string_of_int n), n + 1)
   end
 
+let value_to_str (v : value) : string =
+  begin match v with Num n -> string_of_int n | Name name -> name
+  end
+
+let step_to_str (s : step) : string =
+  begin match s with
+  | Returni v ->
+      begin match v with
+      | Num n -> "Return " ^ string_of_int n
+      | Name name -> "Return " ^ name
+      end
+  | Unaryi (op, first, second) -> begin
+      value_to_str second ^ " =" ^ Ast.unary_op_to_str op ^ value_to_str first
+    end
+  | Binaryi (op, left, right, destination) -> begin
+      value_to_str destination ^ " = " ^ value_to_str left
+      ^ Ast.bin_op_to_str op ^ value_to_str right
+    end
+  end
+
 let rec flattening_exp (expression : Ast.exp) (counter : int) :
     step list * value * int =
   begin match expression with
