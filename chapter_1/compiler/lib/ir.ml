@@ -108,3 +108,17 @@ let flattening_program (p : Ast.program_def) : fun_def_in_IR list =
   begin
     List.map flattening_function p.fun_defs
   end
+
+let fun_ir_to_str (f : fun_def_in_IR) : string =
+  begin
+    let header =
+      Ast.var_type_to_str f.fun_type_ir
+      ^ " " ^ f.fun_name_ir ^ " ("
+      ^ String.concat ", " f.fun_parameter_ir
+      ^ ") :\n"
+    in
+    let body =
+      List.map (fun (s : step) : string -> "  " ^ step_to_str s) f.fun_body_ir
+    in
+    header ^ String.concat "\n" body
+  end
