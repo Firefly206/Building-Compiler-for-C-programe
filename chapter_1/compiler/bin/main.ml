@@ -43,5 +43,12 @@ let () =
         |> print_endline;
         print_endline "Parse OK"
       end
+    | "--ir" -> begin
+        print_endline "====Intermediate representation====";
+        Parser.parse_program tokens
+        |> Ir.flattening_program |> List.map Ir.fun_ir_to_str
+        |> String.concat "\n\n" |> print_endline;
+        print_endline "IR OK"
+      end
     | _ -> failwith "fails with the usage message"
   end
