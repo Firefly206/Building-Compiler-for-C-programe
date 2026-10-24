@@ -1,9 +1,16 @@
 type reg = EAX
-type operand = Number of int | Reg of reg | Pseudo of string
+
+type operand =
+  | Number of int
+  | Reg of reg
+  | Pseudo of string
+  (* stack carry offset rbp *)
+  | Stack of int
 
 type instruction =
   (* source to destination *)
   | Mov of operand * operand
+  | Neg of operand
   | Ret
 
 let operand_of_value (v : Ir.value) : operand =
@@ -13,7 +20,15 @@ let operand_of_value (v : Ir.value) : operand =
 let instructions_of_step (step : Ir.step) : instruction list =
   begin match step with
   | Ir.Returni v -> [ Mov (operand_of_value v, Reg EAX); Ret ]
-  | Ir.Unaryi (op, first, second) -> failwith "TODO"
+  | Ir.Unaryi (op, first, second) ->
+      begin match op with
+      | Ast.Negate ->
+          [
+            Mov (operand_of_value first, operand_of_value second);
+            Neg (operand_of_value second);
+          ]
+      | Ast.Not -> failwith "TODO"
+      end
   | Ir.Binaryi (op, left_value, right_value, dst) -> failwith "TODO"
   end
 
@@ -36,6 +51,8 @@ let operand_to_str (o : operand) : string =
   | Reg r ->
       begin match r with EAX -> "eax"
       end
+  (* dword is 4 bytes, size of int *)
+  | Stack b -> "dword [rbp" ^ string_of_int b ^ "]"
   | Pseudo s ->
       failwith "this should never happen: pseudoregister reached printer"
   end
@@ -45,6 +62,7 @@ let instruction_to_str (i : instruction) : string =
   (* NASM writes the destination first *)
   | Mov (src, dst) ->
       "    mov " ^ operand_to_str dst ^ ", " ^ operand_to_str src
+  | Neg o -> "    neg " ^ operand_to_str o
   | Ret -> "    ret"
   end
 
