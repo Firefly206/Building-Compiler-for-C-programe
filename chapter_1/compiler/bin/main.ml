@@ -50,5 +50,10 @@ let () =
         |> String.concat "\n\n" |> print_endline;
         print_endline "IR OK"
       end
+    | "--asm" -> begin
+        Parser.parse_program tokens
+        |> Ir.flattening_program |> Asm.asm_of_program |> Asm.asm_program_to_str
+        |> print_string
+      end
     | _ -> failwith "fails with the usage message"
   end
