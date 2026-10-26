@@ -27,11 +27,7 @@ let value_to_str (v : value) : string =
 
 let step_to_str (s : step) : string =
   begin match s with
-  | Returni v ->
-      begin match v with
-      | Num n -> "Return " ^ string_of_int n
-      | Name name -> "Return " ^ name
-      end
+  | Returni v -> value_to_str v
   | Unaryi (op, first, second) -> begin
       value_to_str second ^ " =" ^ Ast.unary_op_to_str op ^ value_to_str first
     end
