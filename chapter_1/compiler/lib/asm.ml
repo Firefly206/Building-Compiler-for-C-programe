@@ -22,7 +22,13 @@ let operand_of_value (v : Ir.value) : operand =
 
 let instructions_of_step (step : Ir.step) : instruction list =
   begin match step with
-  | Ir.Returni v -> [ Mov (operand_of_value v, Reg EAX); Ret ]
+  | Ir.Returni v ->
+      [
+        Mov (operand_of_value v, Reg EAX);
+        Mov (Reg RBP, Reg RSP);
+        Pop (Reg RBP);
+        Ret;
+      ]
   | Ir.Unaryi (op, first, second) ->
       begin match op with
       | Ast.Negate ->
