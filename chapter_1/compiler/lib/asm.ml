@@ -1,4 +1,4 @@
-type reg = EAX
+type reg = EAX | RBP | RSP
 
 type operand =
   | Number of int
@@ -49,12 +49,55 @@ let operand_to_str (o : operand) : string =
   begin match o with
   | Number n -> string_of_int n
   | Reg r ->
-      begin match r with EAX -> "eax"
+      begin match r with EAX -> "eax" | RBP -> "rbp" | RSP -> "rsp"
       end
   (* dword is 4 bytes, size of int *)
   | Stack b -> "dword [rbp" ^ string_of_int b ^ "]"
   | Pseudo s ->
       failwith "this should never happen: pseudoregister reached printer"
+  end
+
+let replace_operand (o : operand) (seen : (string * int) list) :
+    operand * (string * int) list =
+  begin match o with
+  | Number _ -> (o, seen)
+  | Reg _ -> (o, seen)
+  | Stack b -> (o, seen)
+  | Pseudo s ->
+      begin match List.assoc_opt s seen with
+      | Some offset -> (Stack offset, seen)
+      | None -> begin
+          let offset = (List.length seen + 1) * -4 in
+          (Stack offset, (s, offset) :: seen)
+        end
+      end
+  end
+
+let replace_instruction (i : instruction) (seen : (string * int) list) :
+    instruction * (string * int) list =
+  begin match i with
+  | Mov (src, dst) -> begin
+      let new_src, seen' = replace_operand src seen in
+      let new_dst, seen'' = replace_operand dst seen' in
+      (Mov (new_src, new_dst), seen'')
+    end
+  | Neg op -> begin
+      let new_op, seen' = replace_operand op seen in
+      (Neg new_op, seen')
+    end
+  | Ret -> (i, seen)
+  end
+
+let rec replace_body (instructions : instruction list)
+    (seen : (string * int) list) : instruction list * (string * int) list =
+  begin match instructions with
+  | [] -> (instructions, seen)
+  | h :: rest -> begin
+      let i, seen' = replace_instruction h seen in
+      let rest', seen'' = replace_body rest seen' in
+      (* A' :: B' :: C' :: [] *)
+      (i :: rest', seen'')
+    end
   end
 
 let instruction_to_str (i : instruction) : string =
