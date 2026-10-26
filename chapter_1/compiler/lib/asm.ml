@@ -11,6 +11,9 @@ type instruction =
   (* source to destination *)
   | Mov of operand * operand
   | Neg of operand
+  | Push of operand
+  | Pop of operand
+  | Sub of operand * operand
   | Ret
 
 let operand_of_value (v : Ir.value) : operand =
@@ -85,6 +88,19 @@ let replace_instruction (i : instruction) (seen : (string * int) list) :
       let new_op, seen' = replace_operand op seen in
       (Neg new_op, seen')
     end
+  | Push op -> begin
+      let new_op, seen' = replace_operand op seen in
+      (Push new_op, seen')
+    end
+  | Pop op -> begin
+      let new_op, seen' = replace_operand op seen in
+      (Pop new_op, seen')
+    end
+  | Sub (src, dst) -> begin
+      let new_src, seen' = replace_operand src seen in
+      let new_dst, seen'' = replace_operand dst seen' in
+      (Sub (new_src, new_dst), seen'')
+    end
   | Ret -> (i, seen)
   end
 
@@ -106,6 +122,10 @@ let instruction_to_str (i : instruction) : string =
   | Mov (src, dst) ->
       "    mov " ^ operand_to_str dst ^ ", " ^ operand_to_str src
   | Neg o -> "    neg " ^ operand_to_str o
+  | Push o -> "    push " ^ operand_to_str o
+  | Pop o -> "    pop " ^ operand_to_str o
+  | Sub (src, dst) ->
+      "    sub " ^ operand_to_str dst ^ ", " ^ operand_to_str src
   | Ret -> "    ret"
   end
 
