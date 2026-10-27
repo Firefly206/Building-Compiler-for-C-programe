@@ -43,29 +43,6 @@ let instructions_of_step (step : Ir.step) : instruction list =
 
 type asm_fun = { fun_name_asm : string; fun_body_asm : instruction list }
 
-let fun_ir_to_asm (f : Ir.fun_def_in_IR) : asm_fun =
-  begin
-    let body = List.concat (List.map instructions_of_step f.fun_body_ir) in
-    { fun_name_asm = f.fun_name_ir; fun_body_asm = body }
-  end
-
-let asm_of_program (p : Ir.fun_def_in_IR list) : asm_fun list =
-  begin
-    List.map fun_ir_to_asm p
-  end
-
-let operand_to_str (o : operand) : string =
-  begin match o with
-  | Number n -> string_of_int n
-  | Reg r ->
-      begin match r with EAX -> "eax" | RBP -> "rbp" | RSP -> "rsp"
-      end
-  (* dword is 4 bytes, size of int *)
-  | Stack b -> "dword [rbp" ^ string_of_int b ^ "]"
-  | Pseudo s ->
-      failwith "this should never happen: pseudoregister reached printer"
-  end
-
 let replace_operand (o : operand) (seen : (string * int) list) :
     operand * (string * int) list =
   begin match o with
@@ -120,6 +97,36 @@ let rec replace_body (instructions : instruction list)
       (* A' :: B' :: C' :: [] *)
       (i :: rest', seen'')
     end
+  end
+
+let fun_ir_to_asm (f : Ir.fun_def_in_IR) : asm_fun =
+  begin
+    let body = List.concat (List.map instructions_of_step f.fun_body_ir) in
+    let new_body, seen = replace_body body [] in
+    let bytes = List.length seen * 4 in
+    {
+      fun_name_asm = f.fun_name_ir;
+      fun_body_asm =
+        [ Push (Reg RBP); Mov (Reg RSP, Reg RBP); Sub (Number bytes, Reg RSP) ]
+        @ new_body;
+    }
+  end
+
+let asm_of_program (p : Ir.fun_def_in_IR list) : asm_fun list =
+  begin
+    List.map fun_ir_to_asm p
+  end
+
+let operand_to_str (o : operand) : string =
+  begin match o with
+  | Number n -> string_of_int n
+  | Reg r ->
+      begin match r with EAX -> "eax" | RBP -> "rbp" | RSP -> "rsp"
+      end
+  (* dword is 4 bytes, size of int *)
+  | Stack b -> "dword [rbp" ^ string_of_int b ^ "]"
+  | Pseudo s ->
+      failwith "this should never happen: pseudoregister reached printer"
   end
 
 let instruction_to_str (i : instruction) : string =
