@@ -1,4 +1,4 @@
-type reg = EAX | RBP | RSP
+type reg = EAX | RBP | RSP | R10
 
 type operand =
   | Number of int
@@ -99,16 +99,25 @@ let rec replace_body (instructions : instruction list)
     end
   end
 
+let fix_instruction (i : instruction) : instruction list =
+  begin match i with
+  | Mov (Stack s, Stack d) -> begin
+      [ Mov (Stack s, Reg R10); Mov (Reg R10, Stack d) ]
+    end
+  | _ -> [ i ]
+  end
+
 let fun_ir_to_asm (f : Ir.fun_def_in_IR) : asm_fun =
   begin
     let body = List.concat (List.map instructions_of_step f.fun_body_ir) in
     let new_body, seen = replace_body body [] in
+    let new_body' = List.concat (List.map fix_instruction new_body) in
     let bytes = List.length seen * 4 in
     {
       fun_name_asm = f.fun_name_ir;
       fun_body_asm =
         [ Push (Reg RBP); Mov (Reg RSP, Reg RBP); Sub (Number bytes, Reg RSP) ]
-        @ new_body;
+        @ new_body';
     }
   end
 
@@ -121,7 +130,11 @@ let operand_to_str (o : operand) : string =
   begin match o with
   | Number n -> string_of_int n
   | Reg r ->
-      begin match r with EAX -> "eax" | RBP -> "rbp" | RSP -> "rsp"
+      begin match r with
+      | EAX -> "eax"
+      | RBP -> "rbp"
+      | RSP -> "rsp"
+      | R10 -> "r10d" (* 32 bits *)
       end
   (* dword is 4 bytes, size of int *)
   | Stack b -> "dword [rbp" ^ string_of_int b ^ "]"
