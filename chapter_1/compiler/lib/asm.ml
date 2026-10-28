@@ -1,4 +1,4 @@
-type reg = EAX | RBP | RSP | R10
+type reg = EAX | RBP | RSP | R10 | R11
 
 type operand =
   | Number of int
@@ -14,6 +14,8 @@ type instruction =
   | Push of operand
   | Pop of operand
   | Sub of operand * operand
+  | Add of operand * operand
+  | Mul of operand * operand
   | Ret
 
 let operand_of_value (v : Ir.value) : operand =
@@ -38,7 +40,25 @@ let instructions_of_step (step : Ir.step) : instruction list =
           ]
       | Ast.Not -> failwith "TODO"
       end
-  | Ir.Binaryi (op, left_value, right_value, dst) -> failwith "TODO"
+  | Ir.Binaryi (op, left_value, right_value, dst) ->
+      begin match op with
+      | Ast.Add ->
+          [
+            Mov (operand_of_value left_value, operand_of_value dst);
+            Add (operand_of_value right_value, operand_of_value dst);
+          ]
+      | Ast.Subtract ->
+          [
+            Mov (operand_of_value left_value, operand_of_value dst);
+            Sub (operand_of_value right_value, operand_of_value dst);
+          ]
+      | Ast.Multiply ->
+          [
+            Mov (operand_of_value left_value, operand_of_value dst);
+            Mul (operand_of_value right_value, operand_of_value dst);
+          ]
+      | _ -> failwith "TODO"
+      end
   end
 
 type asm_fun = { fun_name_asm : string; fun_body_asm : instruction list }
@@ -84,6 +104,16 @@ let replace_instruction (i : instruction) (seen : (string * int) list) :
       let new_dst, seen'' = replace_operand dst seen' in
       (Sub (new_src, new_dst), seen'')
     end
+  | Add (src, dst) -> begin
+      let new_src, seen' = replace_operand src seen in
+      let new_dst, seen'' = replace_operand dst seen' in
+      (Add (new_src, new_dst), seen'')
+    end
+  | Mul (src, dst) -> begin
+      let new_src, seen' = replace_operand src seen in
+      let new_dst, seen'' = replace_operand dst seen' in
+      (Mul (new_src, new_dst), seen'')
+    end
   | Ret -> (i, seen)
   end
 
@@ -104,6 +134,10 @@ let fix_instruction (i : instruction) : instruction list =
   | Mov (Stack s, Stack d) -> begin
       [ Mov (Stack s, Reg R10); Mov (Reg R10, Stack d) ]
     end
+  | Sub (Stack s, Stack d) -> [ Mov (Stack s, Reg R10); Sub (Reg R10, Stack d) ]
+  | Add (Stack s, Stack d) -> [ Mov (Stack s, Reg R10); Add (Reg R10, Stack d) ]
+  | Mul (s, Stack d) ->
+      [ Mov (Stack d, Reg R11); Mul (s, Reg R11); Mov (Reg R11, Stack d) ]
   | _ -> [ i ]
   end
 
@@ -135,6 +169,7 @@ let operand_to_str (o : operand) : string =
       | RBP -> "rbp"
       | RSP -> "rsp"
       | R10 -> "r10d" (* 32 bits *)
+      | R11 -> "r11d" (* same as r10d, another scratch register*)
       end
   (* dword is 4 bytes, size of int *)
   | Stack b -> "dword [rbp" ^ string_of_int b ^ "]"
@@ -152,6 +187,10 @@ let instruction_to_str (i : instruction) : string =
   | Pop o -> "    pop " ^ operand_to_str o
   | Sub (src, dst) ->
       "    sub " ^ operand_to_str dst ^ ", " ^ operand_to_str src
+  | Add (src, dst) ->
+      "    add " ^ operand_to_str dst ^ ", " ^ operand_to_str src
+  | Mul (src, dst) ->
+      "    imul " ^ operand_to_str dst ^ ", " ^ operand_to_str src
   | Ret -> "    ret"
   end
 
