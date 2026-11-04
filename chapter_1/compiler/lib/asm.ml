@@ -1,4 +1,4 @@
-type reg = EAX | RBP | RSP | R10 | R11
+type reg = EAX | RBP | RSP | R10 | R11 | DX
 
 type operand =
   | Number of int
@@ -16,6 +16,8 @@ type instruction =
   | Sub of operand * operand
   | Add of operand * operand
   | Mul of operand * operand
+  | Cdq
+  | Idiv of operand
   | Ret
 
 let operand_of_value (v : Ir.value) : operand =
@@ -56,6 +58,13 @@ let instructions_of_step (step : Ir.step) : instruction list =
           [
             Mov (operand_of_value left_value, operand_of_value dst);
             Mul (operand_of_value right_value, operand_of_value dst);
+          ]
+      | Ast.Divide ->
+          [
+            Mov (operand_of_value left_value, Reg EAX);
+            Cdq;
+            Idiv (operand_of_value right_value);
+            Mov (Reg EAX, operand_of_value dst);
           ]
       | _ -> failwith "TODO"
       end
@@ -114,6 +123,11 @@ let replace_instruction (i : instruction) (seen : (string * int) list) :
       let new_dst, seen'' = replace_operand dst seen' in
       (Mul (new_src, new_dst), seen'')
     end
+  | Idiv op -> begin
+      let new_op, seen' = replace_operand op seen in
+      (Idiv new_op, seen')
+    end
+  | Cdq -> (i, seen)
   | Ret -> (i, seen)
   end
 
@@ -138,6 +152,7 @@ let fix_instruction (i : instruction) : instruction list =
   | Add (Stack s, Stack d) -> [ Mov (Stack s, Reg R10); Add (Reg R10, Stack d) ]
   | Mul (s, Stack d) ->
       [ Mov (Stack d, Reg R11); Mul (s, Reg R11); Mov (Reg R11, Stack d) ]
+  | Idiv (Number n) -> [ Mov (Number n, Reg R10); Idiv (Reg R10) ]
   | _ -> [ i ]
   end
 
@@ -170,6 +185,7 @@ let operand_to_str (o : operand) : string =
       | RSP -> "rsp"
       | R10 -> "r10d" (* 32 bits *)
       | R11 -> "r11d" (* same as r10d, another scratch register*)
+      | DX -> "edx"
       end
   (* dword is 4 bytes, size of int *)
   | Stack b -> "dword [rbp" ^ string_of_int b ^ "]"
@@ -191,6 +207,8 @@ let instruction_to_str (i : instruction) : string =
       "    add " ^ operand_to_str dst ^ ", " ^ operand_to_str src
   | Mul (src, dst) ->
       "    imul " ^ operand_to_str dst ^ ", " ^ operand_to_str src
+  | Idiv o -> "    idiv " ^ operand_to_str o
+  | Cdq -> "    cdq"
   | Ret -> "    ret"
   end
 
