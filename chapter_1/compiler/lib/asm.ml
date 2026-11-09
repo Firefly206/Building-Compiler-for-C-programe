@@ -7,6 +7,13 @@ type operand =
   (* stack carry offset rbp *)
   | Stack of int
 
+type operand_size = Byte | Dword
+
+(* condition for SetCC (and later JmpCC for if/while).
+   The printer turns each one into the suffix of the real instruction:
+   E -> sete, NE -> setne, L -> setl, LE -> setle, G -> setg, GE -> setge *)
+type comparison_cond = E | NE | L | LE | G | GE
+
 type instruction =
   (* source to destination *)
   | Mov of operand * operand
@@ -18,6 +25,13 @@ type instruction =
   | Mul of operand * operand
   | Cdq
   | Idiv of operand
+  (* source first, like Sub. Cmp (right, left) prints "cmp left, right"
+     and computes left - right, then sets the flags *)
+  | Cmp of operand * operand
+  (* writes 0 or 1 into ONE byte of the operand. Our values are 4 bytes,
+     so we do "mov dst, 0" first. The printer must use the 1-byte name:
+     al / r10b for registers, "byte [rbp-4]" for a stack slot *)
+  | SetCC of (comparison_cond * operand)
   | Ret
 
 let operand_of_value (v : Ir.value) : operand =
@@ -128,6 +142,15 @@ let replace_instruction (i : instruction) (seen : (string * int) list) :
       (Idiv new_op, seen')
     end
   | Cdq -> (i, seen)
+  | Cmp (src, dst) -> begin
+      let new_src, seen' = replace_operand src seen in
+      let new_dst, seen'' = replace_operand dst seen' in
+      (Cmp (new_src, new_dst), seen'')
+    end
+  | SetCC (cond, dst) -> begin
+      let new_dst, seen' = replace_operand dst seen in
+      (SetCC (cond, new_dst), seen')
+    end
   | Ret -> (i, seen)
   end
 
@@ -175,40 +198,68 @@ let asm_of_program (p : Ir.fun_def_in_IR list) : asm_fun list =
     List.map fun_ir_to_asm p
   end
 
-let operand_to_str (o : operand) : string =
+let operand_to_str (size : operand_size) (o : operand) : string =
   begin match o with
   | Number n -> string_of_int n
   | Reg r ->
-      begin match r with
-      | EAX -> "eax"
-      | RBP -> "rbp"
-      | RSP -> "rsp"
-      | R10 -> "r10d" (* 32 bits *)
-      | R11 -> "r11d" (* same as r10d, another scratch register*)
-      | DX -> "edx"
+      begin match (r, size) with
+      | EAX, Dword -> "eax"
+      | EAX, Byte -> "al"
+      | R10, Dword -> "r10d"
+      | R10, Byte -> "r10b"
+      | R11, Dword -> "r11d"
+      | R11, Byte -> "r11b"
+      | DX, Dword -> "edx"
+      | DX, Byte -> "dl"
+      | RBP, Dword -> "rbp"
+      | RSP, Dword -> "rsp"
+      | RBP, Byte ->
+          failwith
+            "printing a 1-byte rbp/rsp: an earlier pass built an invalid \
+             operand (rbp and rsp are only used as full 64-bit registers for \
+             the stack frame)"
+      | RSP, Byte ->
+          failwith
+            "printing a 1-byte rbp/rsp: an earlier pass built an invalid \
+             operand (rbp and rsp are only used as full 64-bit registers for \
+             the stack frame)"
       end
   (* dword is 4 bytes, size of int *)
-  | Stack b -> "dword [rbp" ^ string_of_int b ^ "]"
+  | Stack b ->
+      begin match size with
+      | Dword -> "dword [rbp" ^ string_of_int b ^ "]"
+      | Byte -> "byte [rbp" ^ string_of_int b ^ "]"
+      end
   | Pseudo s ->
       failwith "this should never happen: pseudoregister reached printer"
   end
 
+let compare_cond_to_str (cond : comparison_cond) : string =
+  begin match cond with
+  | E -> "e"
+  | NE -> "ne"
+  | L -> "l"
+  | LE -> "le"
+  | G -> "g"
+  | GE -> "ge"
+  end
+
 let instruction_to_str (i : instruction) : string =
+  let op = operand_to_str Dword in
   begin match i with
   (* NASM writes the destination first *)
-  | Mov (src, dst) ->
-      "    mov " ^ operand_to_str dst ^ ", " ^ operand_to_str src
-  | Neg o -> "    neg " ^ operand_to_str o
-  | Push o -> "    push " ^ operand_to_str o
-  | Pop o -> "    pop " ^ operand_to_str o
-  | Sub (src, dst) ->
-      "    sub " ^ operand_to_str dst ^ ", " ^ operand_to_str src
-  | Add (src, dst) ->
-      "    add " ^ operand_to_str dst ^ ", " ^ operand_to_str src
-  | Mul (src, dst) ->
-      "    imul " ^ operand_to_str dst ^ ", " ^ operand_to_str src
-  | Idiv o -> "    idiv " ^ operand_to_str o
+  | Mov (src, dst) -> "    mov " ^ op dst ^ ", " ^ op src
+  | Neg o -> "    neg " ^ op o
+  | Push o -> "    push " ^ op o
+  | Pop o -> "    pop " ^ op o
+  | Sub (src, dst) -> "    sub " ^ op dst ^ ", " ^ op src
+  | Add (src, dst) -> "    add " ^ op dst ^ ", " ^ op src
+  | Mul (src, dst) -> "    imul " ^ op dst ^ ", " ^ op src
+  | Idiv o -> "    idiv " ^ op o
   | Cdq -> "    cdq"
+  | Cmp (src, dst) -> "    cmp " ^ op dst ^ ", " ^ op src
+  | SetCC (cond, dst) ->
+      "    set" ^ compare_cond_to_str cond ^ " " ^ operand_to_str Byte dst
   | Ret -> "    ret"
   end
 
