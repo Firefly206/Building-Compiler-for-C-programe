@@ -68,7 +68,12 @@ let instructions_of_step (step : Ir.step) : instruction list =
             Mov (operand_of_value first, operand_of_value second);
             Neg (operand_of_value second);
           ]
-      | Ast.Not -> failwith "TODO"
+      | Ast.Not ->
+          [
+            Cmp (Number 0, operand_of_value first);
+            Mov (Number 0, operand_of_value second);
+            SetCC (E, operand_of_value second);
+          ]
       end
   | Ir.Binaryi (op, left_value, right_value, dst) ->
       begin match op with
