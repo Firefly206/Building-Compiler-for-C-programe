@@ -38,6 +38,20 @@ let operand_of_value (v : Ir.value) : operand =
   begin match v with Ir.Num n -> Number n | Ir.Name s -> Pseudo s
   end
 
+let map_binop_to_comp_cond (binop : Ast.binary_operator) : comparison_cond =
+  begin match binop with
+  | Ast.Equal -> E
+  | Ast.NotEqual -> NE
+  | Ast.LessThan -> L
+  | Ast.LessOrEqual -> LE
+  | Ast.GreaterThan -> G
+  | Ast.GreaterOrEqual -> GE
+  | Ast.Add | Ast.Subtract | Ast.Multiply | Ast.Divide | Ast.And | Ast.Or ->
+      failwith
+        "map_binop_to_comp_cond: not a comparison operator. Expected ==, !=, \
+         <, <=, > or >="
+  end
+
 let instructions_of_step (step : Ir.step) : instruction list =
   begin match step with
   | Ir.Returni v ->
@@ -80,7 +94,15 @@ let instructions_of_step (step : Ir.step) : instruction list =
             Idiv (operand_of_value right_value);
             Mov (Reg EAX, operand_of_value dst);
           ]
-      | _ -> failwith "TODO"
+      | Ast.Equal | Ast.NotEqual | Ast.LessThan | Ast.LessOrEqual
+      | Ast.GreaterThan | Ast.GreaterOrEqual -> begin
+          [
+            Cmp (operand_of_value right_value, operand_of_value left_value);
+            Mov (Number 0, operand_of_value dst);
+            SetCC (map_binop_to_comp_cond op, operand_of_value dst);
+          ]
+        end
+      | Ast.And | Ast.Or -> failwith "TODO"
       end
   end
 
@@ -176,6 +198,8 @@ let fix_instruction (i : instruction) : instruction list =
   | Mul (s, Stack d) ->
       [ Mov (Stack d, Reg R11); Mul (s, Reg R11); Mov (Reg R11, Stack d) ]
   | Idiv (Number n) -> [ Mov (Number n, Reg R10); Idiv (Reg R10) ]
+  | Cmp (Stack s, Stack d) -> [ Mov (Stack s, Reg R10); Cmp (Reg R10, Stack d) ]
+  | Cmp (src, Number n) -> [ Mov (Number n, Reg R11); Cmp (src, Reg R11) ]
   | _ -> [ i ]
   end
 
