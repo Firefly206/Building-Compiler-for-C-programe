@@ -32,6 +32,12 @@ type instruction =
      so we do "mov dst, 0" first. The printer must use the 1-byte name:
      al / r10b for registers, "byte [rbp-4]" for a stack slot *)
   | SetCC of (comparison_cond * operand)
+  (* jump to a label *)
+  | Jmp of string
+  (* conditional jump *)
+  | JmpCC of comparison_cond * string
+  (* carries the name *)
+  | Label of string
   | Ret
 
 let operand_of_value (v : Ir.value) : operand =
@@ -109,6 +115,13 @@ let instructions_of_step (step : Ir.step) : instruction list =
         end
       | Ast.And | Ast.Or -> failwith "TODO"
       end
+  | Ir.Copyi (src, dst) -> [ Mov (operand_of_value src, operand_of_value dst) ]
+  | Ir.Jumpi label -> [ Jmp label ]
+  | Ir.JumpIfZeroi (v, label) ->
+      [ Cmp (Number 0, operand_of_value v); JmpCC (E, label) ]
+  | Ir.JumpIfNotZeroi (v, label) ->
+      [ Cmp (Number 0, operand_of_value v); JmpCC (NE, label) ]
+  | Ir.Labeli label -> [ Label label ]
   end
 
 type asm_fun = { fun_name_asm : string; fun_body_asm : instruction list }
@@ -178,6 +191,7 @@ let replace_instruction (i : instruction) (seen : (string * int) list) :
       let new_dst, seen' = replace_operand dst seen in
       (SetCC (cond, new_dst), seen')
     end
+  | Jmp _ | JmpCC _ | Label _ -> (i, seen)
   | Ret -> (i, seen)
   end
 
@@ -289,6 +303,9 @@ let instruction_to_str (i : instruction) : string =
   | Cmp (src, dst) -> "    cmp " ^ op dst ^ ", " ^ op src
   | SetCC (cond, dst) ->
       "    set" ^ compare_cond_to_str cond ^ " " ^ operand_to_str Byte dst
+  | Jmp label -> "    jmp .L" ^ label
+  | JmpCC (cond, label) -> "    j" ^ compare_cond_to_str cond ^ " .L" ^ label
+  | Label label -> ".L" ^ label ^ ":"
   | Ret -> "    ret"
   end
 

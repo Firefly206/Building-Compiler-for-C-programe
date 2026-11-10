@@ -7,6 +7,16 @@ type step =
   | Unaryi of Ast.unary_operator * value * value
   (* Binary (operator, left_value, right_value, store/destination)*)
   | Binaryi of Ast.binary_operator * value * value * value
+  (* Copyi (source value, destination value) *)
+  | Copyi of value * value
+  (* jump to a label (string) *)
+  | Jumpi of string
+  (* jump if a value is zero. *)
+  | JumpIfZeroi of value * string
+  (* Same thing as JumpIfZeroi. Meaning in the name *)
+  | JumpIfNotZeroi of value * string
+  (* mark a label *)
+  | Labeli of string
 
 (* record type for one IR function with four fields: name, return type, parameters (a string list), and body (a step list) *)
 type fun_def_in_IR = {
@@ -29,12 +39,19 @@ let step_to_str (s : step) : string =
   begin match s with
   | Returni v -> value_to_str v
   | Unaryi (op, first, second) -> begin
-      value_to_str second ^ " =" ^ Ast.unary_op_to_str op ^ value_to_str first
+      value_to_str second ^ " = " ^ Ast.unary_op_to_str op ^ value_to_str first
     end
   | Binaryi (op, left, right, destination) -> begin
       value_to_str destination ^ " = " ^ value_to_str left
       ^ Ast.bin_op_to_str op ^ value_to_str right
     end
+  | Copyi (src, dst) -> begin value_to_str dst ^ " = " ^ value_to_str src end
+  | Jumpi end_label -> "jump " ^ end_label
+  | JumpIfZeroi (v, end_label) ->
+      "jump_if_zero " ^ value_to_str v ^ " " ^ end_label
+  | JumpIfNotZeroi (v, end_label) ->
+      "jump_if_not_zero " ^ value_to_str v ^ " " ^ end_label
+  | Labeli end_label -> end_label ^ ":"
   end
 
 let rec flattening_exp (expression : Ast.exp) (counter : int) :
