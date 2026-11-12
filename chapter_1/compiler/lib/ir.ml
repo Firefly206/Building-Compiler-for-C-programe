@@ -160,6 +160,18 @@ let rec flattening_statement (s : Ast.statement) (c : int) : step list * int =
         @ lst_statement @ [ Labeli end_label ],
         c''' )
     end
+  | Ast.If (cond, then_s, Some else_s) -> begin
+      let lst_cond, v, c' = flattening_exp cond c in
+      let then_steps, c'' = flattening_statement then_s c' in
+      let else_label, after = create_label_name "if_else" c'' in
+      let else_steps, after' = flattening_statement else_s after in
+      let end_label, after'' = create_label_name "if_end" after' in
+      ( lst_cond
+        @ [ JumpIfZeroi (v, else_label) ]
+        @ then_steps @ [ Jumpi end_label ] @ [ Labeli else_label ] @ else_steps
+        @ [ Labeli end_label ],
+        after'' )
+    end
   | _ -> failwith "TODO"
   end
 
