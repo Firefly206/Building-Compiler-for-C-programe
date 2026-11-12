@@ -141,6 +141,15 @@ let flattening_statement (s : Ast.statement) (c : int) : step list * int =
       let lst, _, c' = flattening_exp e c in
       (lst, c')
     end
+  | Ast.Declaration d -> begin
+      begin match d.init_val with
+      | Some e -> begin
+          let right_lst, right_v, rightc' = flattening_exp e c in
+          (right_lst @ [ Copyi (right_v, Name d.name) ], rightc')
+        end
+      | None -> ([], c)
+      end
+    end
   | _ -> failwith "TODO"
   end
 
