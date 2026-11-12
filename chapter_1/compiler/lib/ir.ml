@@ -92,7 +92,26 @@ let rec flattening_exp (expression : Ast.exp) (counter : int) :
         result,
         after )
     end
-  | Ast.Binary (Ast.Or, _, _) -> failwith "TODO"
+  | Ast.Binary (Ast.Or, left, right) -> begin
+      let left_lst, left_v, leftc' = flattening_exp left counter in
+      let right_lst, right_v, rightc' = flattening_exp right leftc' in
+      let true_label, counter'' = create_label_name "or_true" rightc' in
+      let end_label, counter''' = create_label_name "or_end" counter'' in
+      let result, after = create_tmp_name counter''' in
+      ( left_lst
+        @ [ JumpIfNotZeroi (left_v, true_label) ]
+        @ right_lst
+        @ [
+            JumpIfNotZeroi (right_v, true_label);
+            Copyi (Num 0, result);
+            Jumpi end_label;
+            Labeli true_label;
+            Copyi (Num 1, result);
+            Labeli end_label;
+          ],
+        result,
+        after )
+    end
   | Ast.Binary (op, left, right) -> begin
       let left_lst, left_v, leftc' = flattening_exp left counter in
       let right_lst, right_v, rightc' = flattening_exp right leftc' in
