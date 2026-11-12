@@ -31,6 +31,11 @@ let create_tmp_name (n : int) : value * int =
     (Name ("tmp." ^ string_of_int n), n + 1)
   end
 
+let create_label_name (prefix : string) (counter : int) : string * int =
+  begin
+    (prefix ^ "_" ^ string_of_int counter, counter + 1)
+  end
+
 let value_to_str (v : value) : string =
   begin match v with Num n -> string_of_int n | Name name -> name
   end
@@ -67,7 +72,26 @@ let rec flattening_exp (expression : Ast.exp) (counter : int) :
          lst @ [ Unaryi () ] *)
       (lst @ [ Unaryi (op, v, tmp_name_val) ], tmp_name_val, counter'')
     end
-  | Ast.Binary (Ast.And, _, _) -> failwith "TODO"
+  | Ast.Binary (Ast.And, left, right) -> begin
+      let left_lst, left_v, leftc' = flattening_exp left counter in
+      let right_lst, right_v, rightc' = flattening_exp right leftc' in
+      let false_label, counter'' = create_label_name "and_false" rightc' in
+      let end_label, counter''' = create_label_name "and_end" counter'' in
+      let result, after = create_tmp_name counter''' in
+      ( left_lst
+        @ [ JumpIfZeroi (left_v, false_label) ]
+        @ right_lst
+        @ [
+            JumpIfZeroi (right_v, false_label);
+            Copyi (Num 1, result);
+            Jumpi end_label;
+            Labeli false_label;
+            Copyi (Num 0, result);
+            Labeli end_label;
+          ],
+        result,
+        after )
+    end
   | Ast.Binary (Ast.Or, _, _) -> failwith "TODO"
   | Ast.Binary (op, left, right) -> begin
       let left_lst, left_v, leftc' = flattening_exp left counter in
