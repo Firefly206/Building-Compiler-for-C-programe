@@ -130,6 +130,15 @@ let rec flattening_exp (expression : Ast.exp) (counter : int) :
          parser should have rejected this"
   end
 
+let flattening_optional_exp (e : Ast.exp option) (c : int) : step list * int =
+  begin match e with
+  | Some e -> begin
+      let lst, v, c' = flattening_exp e c in
+      (lst, c')
+    end
+  | None -> ([], c)
+  end
+
 let rec flattening_statement (s : Ast.statement) (c : int) : step list * int =
   begin match s with
   | Ast.Return e -> begin
@@ -182,7 +191,30 @@ let rec flattening_statement (s : Ast.statement) (c : int) : step list * int =
         @ body_steps @ [ Jumpi start_label ] @ [ Labeli end_label ],
         after' )
     end
-  | _ -> failwith "TODO"
+  | Ast.For (loop, body) -> begin
+      let init_steps, c' =
+        begin match loop.init with
+        | Ast.InitDeclare d -> flattening_statement (Ast.Declaration d) c
+        | Ast.InitExp e -> flattening_optional_exp e c
+        end
+      in
+      let start_label, c'' = create_label_name "for_start" c' in
+      let end_label, c''' = create_label_name "for_end" c'' in
+      let cond_steps, after =
+        begin match loop.condition with
+        | Some e -> begin
+            let lst_cond, v, counter = flattening_exp e c''' in
+            (lst_cond @ [ JumpIfZeroi (v, end_label) ], counter)
+          end
+        | None -> ([], c''')
+        end
+      in
+      let lst_post_cond, after' = flattening_optional_exp loop.post after in
+      let body_steps, after'' = flattening_statement body after' in
+      ( init_steps @ [ Labeli start_label ] @ cond_steps @ body_steps
+        @ lst_post_cond @ [ Jumpi start_label ] @ [ Labeli end_label ],
+        after'' )
+    end
   end
 
 (* "and" here is not logical and: it means "defined together with the
