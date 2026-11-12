@@ -120,7 +120,14 @@ let rec flattening_exp (expression : Ast.exp) (counter : int) :
         destination_val,
         counter'' )
     end
-  | _ -> failwith "not yet"
+  | Ast.Assignment (Ast.Variable name, right) -> begin
+      let right_lst, right_v, rightc' = flattening_exp right counter in
+      (right_lst @ [ Copyi (right_v, Name name) ], Name name, rightc')
+    end
+  | Ast.Assignment (_, _) ->
+      failwith
+        "flattening_exp: assignment to something that is not a variable; the \
+         parser should have rejected this"
   end
 
 let flattening_statement (s : Ast.statement) (c : int) : step list * int =
@@ -128,6 +135,11 @@ let flattening_statement (s : Ast.statement) (c : int) : step list * int =
   | Ast.Return e -> begin
       let lst, v, c' = flattening_exp e c in
       (lst @ [ Returni v ], c')
+    end
+  | Ast.Null -> ([], c)
+  | Ast.Expression e -> begin
+      let lst, _, c' = flattening_exp e c in
+      (lst, c')
     end
   | _ -> failwith "TODO"
   end
