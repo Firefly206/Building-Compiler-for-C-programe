@@ -130,7 +130,7 @@ let rec flattening_exp (expression : Ast.exp) (counter : int) :
          parser should have rejected this"
   end
 
-let flattening_statement (s : Ast.statement) (c : int) : step list * int =
+let rec flattening_statement (s : Ast.statement) (c : int) : step list * int =
   begin match s with
   | Ast.Return e -> begin
       let lst, v, c' = flattening_exp e c in
@@ -150,10 +150,24 @@ let flattening_statement (s : Ast.statement) (c : int) : step list * int =
       | None -> ([], c)
       end
     end
+  | Ast.Block lst -> flattening_list_statement lst c
+  | Ast.If (cond, then_s, None) -> begin
+      let lst_cond, v, c' = flattening_exp cond c in
+      let end_label, c'' = create_label_name "if_end" c' in
+      let lst_statement, c''' = flattening_statement then_s c'' in
+      ( lst_cond
+        @ [ JumpIfZeroi (v, end_label) ]
+        @ lst_statement @ [ Labeli end_label ],
+        c''' )
+    end
   | _ -> failwith "TODO"
   end
 
-let rec flattening_list_statement (lst_s : Ast.statement list) (c : int) :
+(* "and" here is not logical and: it means "defined together with the
+   function above". flattening_statement calls flattening_list_statement
+   (for a Block) and flattening_list_statement calls flattening_statement
+   (for each statement), so each must be able to see the other. *)
+and flattening_list_statement (lst_s : Ast.statement list) (c : int) :
     step list * int =
   begin match lst_s with
   | [] -> ([], c)
