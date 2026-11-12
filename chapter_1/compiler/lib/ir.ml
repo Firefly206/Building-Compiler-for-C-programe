@@ -172,6 +172,16 @@ let rec flattening_statement (s : Ast.statement) (c : int) : step list * int =
         @ [ Labeli end_label ],
         after'' )
     end
+  | Ast.While (cond, body) -> begin
+      let lst_cond, v, c' = flattening_exp cond c in
+      let start_label, c'' = create_label_name "while_start" c' in
+      let body_steps, after = flattening_statement body c'' in
+      let end_label, after' = create_label_name "while_end" after in
+      ( [ Labeli start_label ] @ lst_cond
+        @ [ JumpIfZeroi (v, end_label) ]
+        @ body_steps @ [ Jumpi start_label ] @ [ Labeli end_label ],
+        after' )
+    end
   | _ -> failwith "TODO"
   end
 
