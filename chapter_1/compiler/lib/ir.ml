@@ -244,7 +244,7 @@ let flattening_function (f : Ast.fun_def) : fun_def_in_IR =
       fun_body_ir =
         begin
           let steps, _ = flattening_list_statement f.fun_body 0 in
-          steps
+          steps @ [ Returni (Num 0) ]
         end;
     }
   end
