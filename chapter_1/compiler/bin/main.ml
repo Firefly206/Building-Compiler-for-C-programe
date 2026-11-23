@@ -43,17 +43,33 @@ let () =
         |> print_endline;
         print_endline "Parse OK"
       end
+    | "--sem" -> begin
+        print_endline "====Semantic state====";
+        Parser.parse_program tokens
+        |> (fun (p : Ast.program_def) : (Ast.program_def * int) ->
+        Semantic.resolve_program p 0)
+        |> fst |> Pretty.node_of_program
+        |> (fun (n : Pretty.node) : string -> Pretty.renderer n 0)
+        |> print_endline;
+        print_endline "Semantic OK"
+      end
     | "--ir" -> begin
         print_endline "====Intermediate representation====";
         Parser.parse_program tokens
+        |> (fun (p : Ast.program_def) : (Ast.program_def * int) ->
+        Semantic.resolve_program p 0)
+        |> fst
+           (* fst is a function from OCaml's standard library. fst takes a pair (a 2-tuple) and returns the first element *)
         |> Ir.flattening_program |> List.map Ir.fun_ir_to_str
         |> String.concat "\n\n" |> print_endline;
         print_endline "IR OK"
       end
     | "--asm" -> begin
         Parser.parse_program tokens
-        |> Ir.flattening_program |> Asm.asm_of_program |> Asm.asm_program_to_str
-        |> print_string
+        |> (fun (p : Ast.program_def) : (Ast.program_def * int) ->
+        Semantic.resolve_program p 0)
+        |> fst |> Ir.flattening_program |> Asm.asm_of_program
+        |> Asm.asm_program_to_str |> print_string
       end
     | _ -> failwith "fails with the usage message"
   end
