@@ -28,7 +28,7 @@ type fun_def_in_IR = {
 
 let create_tmp_name (n : int) : value * int =
   begin
-    (Name ("tmp." ^ string_of_int n), n + 1)
+    (Name ("$tmp." ^ string_of_int n), n + 1)
   end
 
 let create_label_name (prefix : string) (counter : int) : string * int =
