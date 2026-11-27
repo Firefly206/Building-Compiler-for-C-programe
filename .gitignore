@@ -29,3 +29,4 @@ setup.log
 
 # External test suite (not part of this project's source)
 writing-a-c-compiler-tests/
+presentation/
